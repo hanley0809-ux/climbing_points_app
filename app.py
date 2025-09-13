@@ -2,10 +2,26 @@ import streamlit as st
 import gspread
 import pandas as pd
 from datetime import datetime
+import uuid  # Library to generate unique IDs
+import extra_streamlit_components as stx # The cookie manager library
 
-# --- 1. Initialize Session State ---
-# This creates a temporary list to hold climbs for the current session.
-# It persists across reruns but is cleared when the session is finished.
+# --- 1. SETUP COOKIE-BASED USER ID ---
+@st.cache_resource
+def get_cookie_manager():
+    return stx.CookieManager()
+
+cookie_manager = get_cookie_manager()
+
+# Get the unique user ID from the cookie, or create a new one
+USER_ID_COOKIE = "climbing_app_user_id"
+user_id = cookie_manager.get(cookie=USER_ID_COOKIE)
+if not user_id:
+    user_id = str(uuid.uuid4())
+    # Set the cookie with a long expiration date
+    cookie_manager.set(USER_ID_COOKIE, user_id, expires_at=datetime(year=2035, month=1, day=1))
+    st.rerun() # Rerun to ensure the cookie is set on the first visit
+
+# --- Initialize Session State ---
 if 'current_session_climbs' not in st.session_state:
     st.session_state.current_session_climbs = []
 
@@ -52,66 +68,47 @@ def get_google_sheet_client():
         st.stop()
 
 gc = get_google_sheet_client()
-
-try:
-    spreadsheet = gc.open("Climbing Points Data")
-    worksheet = spreadsheet.worksheet("Climbs")
-except Exception as e:
-    st.error(f"Error accessing Google Sheet: {e}")
-    st.stop()
-
+worksheet = gc.open("Climbing Points Data").worksheet("Climbs")
 
 # Dropdowns for logging a new climb
 discipline = st.selectbox("Discipline", options=list(grade_scales.keys()))
 grade = st.selectbox("Grade", options=grade_scales[discipline])
 
-# --- 2. Update the Form Logic ---
-# The "Send It!" button now adds the climb to the temporary session list.
 with st.form("add_climb_form"):
     submitted = st.form_submit_button("🚀 Add Climb to Session")
     if submitted:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # Create a dictionary for the climb
         new_climb = {"Discipline": discipline, "Grade": grade, "Timestamp": timestamp}
-        # Add the new climb to our session state list
         st.session_state.current_session_climbs.append(new_climb)
         st.success(f"Added {grade} to current session!")
 
 st.markdown("---")
-
-# --- 3. Display Current Session and Add "Finish Session" Button ---
 st.header("Current Session")
+
 if st.session_state.current_session_climbs:
-    # Display the climbs you've logged so far in this session
     current_df = pd.DataFrame(st.session_state.current_session_climbs)
     st.dataframe(current_df)
 
-    # The button to save the session to Google Sheets
     if st.button("✅ Finish and Save Session"):
         session_id = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         records_to_add = []
         for climb in st.session_state.current_session_climbs:
-            # Prepare row with the new SessionID
-            row = [climb["Discipline"], climb["Grade"], climb["Timestamp"], session_id]
+            # --- 2. ADD THE USER ID WHEN SAVING DATA ---
+            row = [climb["Discipline"], climb["Grade"], climb["Timestamp"], session_id, user_id]
             records_to_add.append(row)
 
         try:
-            # Append all rows at once for efficiency
             worksheet.append_rows(records_to_add)
             st.success("Session saved successfully! Well done! 🎉")
             st.balloons()
-            # Clear the session state for the next session
             st.session_state.current_session_climbs = []
-            st.rerun() # Rerun the app to refresh the display
+            st.rerun()
         except Exception as e:
             st.error(f"Error saving session to Google Sheet: {e}")
 else:
     st.info("Log a climb to start a new session.")
 
-
 st.markdown("---")
-
-# --- 4. Display Past Sessions (Corrected for old data) ---
 st.header("Past Sessions")
 try:
     data = worksheet.get_all_records()
@@ -120,27 +117,28 @@ try:
     else:
         df = pd.DataFrame(data)
 
-        # --- FIX: Check if SessionID column exists and handle old data ---
-        if 'SessionID' in df.columns:
-            # Filter out old climbs that don't have a session ID
-            sessions_df = df.dropna(subset=['SessionID'])
-            # Also filter out any rows where SessionID might be an empty string
-            sessions_df = sessions_df[sessions_df['SessionID'] != '']
+        # Check if the necessary columns exist
+        if 'SessionID' in df.columns and 'User' in df.columns:
+            # --- 3. FILTER DATA TO SHOW ONLY THE CURRENT USER'S SESSIONS ---
+            user_df = df[df['User'] == user_id]
 
-            if not sessions_df.empty:
-                # Group the valid sessions
-                grouped = sessions_df.groupby('SessionID')
-                # Sort sessions by date (newest first)
-                sorted_sessions = sorted(grouped, key=lambda x: pd.to_datetime(x[0]), reverse=True)
+            if not user_df.empty:
+                sessions_df = user_df.dropna(subset=['SessionID'])
+                sessions_df = sessions_df[sessions_df['SessionID'] != '']
 
-                for session_id, session_df in sorted_sessions:
-                    with st.expander(f"Session from {session_id}"):
-                        st.dataframe(session_df[['Discipline', 'Grade', 'Timestamp']].reset_index(drop=True))
+                if not sessions_df.empty:
+                    grouped = sessions_df.groupby('SessionID')
+                    sorted_sessions = sorted(grouped, key=lambda x: pd.to_datetime(x[0]), reverse=True)
+
+                    for session_id, session_df in sorted_sessions:
+                        with st.expander(f"Session from {session_id}"):
+                            st.dataframe(session_df[['Discipline', 'Grade', 'Timestamp']].reset_index(drop=True))
+                else:
+                    st.info("No completed sessions found yet. Finish a session to see it here.")
             else:
-                st.info("No completed sessions found yet. Finish a session to see it here.")
+                 st.info("You haven't logged any sessions yet. Go send something!")
         else:
-            st.warning("Action Required: Please add the 'SessionID' column header to your Google Sheet.")
-            st.info("Old climbs logged before this feature was added will not be displayed in sessions.")
+            st.warning("Action Required: Please ensure 'SessionID' and 'User' columns exist in your Google Sheet.")
 
 except Exception as e:
     st.error(f"An error occurred while displaying past sessions: {e}")

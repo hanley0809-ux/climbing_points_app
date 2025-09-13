@@ -3,6 +3,12 @@ import gspread
 import pandas as pd
 from datetime import datetime
 
+# --- 1. Initialize Session State ---
+# This creates a temporary list to hold climbs for the current session.
+# It persists across reruns but is cleared when the session is finished.
+if 'current_session_climbs' not in st.session_state:
+    st.session_state.current_session_climbs = []
+
 # Set page title and theme
 st.set_page_config(
     page_title="🧗 Climbing Points",
@@ -10,31 +16,15 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# Custom Theming
+# Custom Theming (your styles are unchanged)
 st.markdown(
     """
     <style>
-    .reportview-container {
-        background: #F8F8F8;
-    }
-    .stSelectbox > label {
-        color: #F5A623;
-    }
-    .stButton > button {
-        background-color: #F5A623;
-        color: white;
-        border-radius: 5px;
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-        font-weight: bold;
-    }
-    .stButton > button:hover {
-        background-color: #E08E0B;
-    }
-    h1 {
-        color: #F5A623;
-    }
+    .reportview-container { background: #F8F8F8; }
+    .stSelectbox > label { color: #F5A623; }
+    .stButton > button { background-color: #F5A623; color: white; border-radius: 5px; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; }
+    .stButton > button:hover { background-color: #E08E0B; }
+    h1 { color: #F5A623; }
     </style>
     """,
     unsafe_allow_html=True
@@ -58,7 +48,7 @@ def get_google_sheet_client():
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
         return gc
     except Exception as e:
-        st.error(f"Error authenticating with Google Sheets. Make sure your `secrets.toml` is configured correctly: {e}")
+        st.error(f"Error authenticating with Google Sheets: {e}")
         st.stop()
 
 gc = get_google_sheet_client()
@@ -66,56 +56,78 @@ gc = get_google_sheet_client()
 try:
     spreadsheet = gc.open("Climbing Points Data")
     worksheet = spreadsheet.worksheet("Climbs")
-except gspread.exceptions.SpreadsheetNotFound:
-    st.error("Google Sheet 'Climbing Points Data' not found. Please create it with a worksheet named 'Climbs'.")
-    st.stop()
-except gspread.exceptions.WorksheetNotFound:
-    st.error("Worksheet 'Climbs' not found in 'Climbing Points Data'. Please create it.")
-    st.stop()
 except Exception as e:
-    st.error(f"Error accessing Google Sheet or Worksheet: {e}")
+    st.error(f"Error accessing Google Sheet: {e}")
     st.stop()
 
 
-# --- FIX: Move dropdowns outside the form for immediate updates ---
-discipline = st.selectbox(
-    "Discipline",
-    options=list(grade_scales.keys()),
-    key="discipline_select"
-)
+# Dropdowns for logging a new climb
+discipline = st.selectbox("Discipline", options=list(grade_scales.keys()))
+grade = st.selectbox("Grade", options=grade_scales[discipline])
 
-grade = st.selectbox(
-    "Grade",
-    options=grade_scales[discipline], # This now updates instantly
-    key="grade_select"
-)
-
-# The form now only contains the submission button
-with st.form("climb_log_form"):
-    submitted = st.form_submit_button("🚀 Send It!")
-
+# --- 2. Update the Form Logic ---
+# The "Send It!" button now adds the climb to the temporary session list.
+with st.form("add_climb_form"):
+    submitted = st.form_submit_button("🚀 Add Climb to Session")
     if submitted:
-        # The 'discipline' and 'grade' variables are available here
-        try:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_row = [discipline, grade, timestamp]
-            worksheet.append_row(new_row)
-            st.success("Climb logged successfully! Keep crushing it! 🎉")
-            st.balloons()
-        except Exception as e:
-            st.error(f"Error appending row to Google Sheet: {e}")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Create a dictionary for the climb
+        new_climb = {"Discipline": discipline, "Grade": grade, "Timestamp": timestamp}
+        # Add the new climb to our session state list
+        st.session_state.current_session_climbs.append(new_climb)
+        st.success(f"Added {grade} to current session!")
 
 st.markdown("---")
-st.subheader("Recent Climbs")
+
+# --- 3. Display Current Session and Add "Finish Session" Button ---
+st.header("Current Session")
+if st.session_state.current_session_climbs:
+    # Display the climbs you've logged so far in this session
+    current_df = pd.DataFrame(st.session_state.current_session_climbs)
+    st.dataframe(current_df)
+
+    # The button to save the session to Google Sheets
+    if st.button("✅ Finish and Save Session"):
+        session_id = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        records_to_add = []
+        for climb in st.session_state.current_session_climbs:
+            # Prepare row with the new SessionID
+            row = [climb["Discipline"], climb["Grade"], climb["Timestamp"], session_id]
+            records_to_add.append(row)
+
+        try:
+            # Append all rows at once for efficiency
+            worksheet.append_rows(records_to_add)
+            st.success("Session saved successfully! Well done! 🎉")
+            st.balloons()
+            # Clear the session state for the next session
+            st.session_state.current_session_climbs = []
+            st.rerun() # Rerun the app to refresh the display
+        except Exception as e:
+            st.error(f"Error saving session to Google Sheet: {e}")
+else:
+    st.info("Log a climb to start a new session.")
+
+
+st.markdown("---")
+
+# --- 4. Display Past Sessions ---
+st.header("Past Sessions")
 try:
     data = worksheet.get_all_records()
-    df = pd.DataFrame(data)
-
-    if not df.empty and 'Timestamp' in df.columns:
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-        df = df.sort_values(by='Timestamp', ascending=False)
-        st.dataframe(df.reset_index(drop=True))
+    if not data:
+        st.info("No past sessions found.")
     else:
-        st.info("No climbs logged yet. Go send something!")
+        df = pd.DataFrame(data)
+        # Group climbs by the SessionID
+        grouped = df.groupby('SessionID')
+        # Sort sessions by date (newest first)
+        sorted_sessions = sorted(grouped, key=lambda x: pd.to_datetime(x[0]), reverse=True)
+
+        for session_id, session_df in sorted_sessions:
+            # Use an expander for each session
+            with st.expander(f"Session from {session_id}"):
+                st.dataframe(session_df[['Discipline', 'Grade', 'Timestamp']].reset_index(drop=True))
+
 except Exception as e:
-    st.error(f"Error retrieving data from Google Sheet: {e}")
+    st.error(f"Error retrieving past sessions from Google Sheet: {e}")

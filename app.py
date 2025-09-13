@@ -43,6 +43,16 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# --- KEY CHANGE 1: Define grade scales in a dictionary ---
+# This makes it much easier to manage and add new scales later.
+grade_scales = {
+    "Bouldering": [f"V{i}" for i in range(11)],  # V0 to V10
+    "Sport Climbing": [
+        "5a", "5b", "5c", "6a", "6a+", "6b", "6b+", "6c", "6c+",
+        "7a", "7a+", "7b", "7b+", "7c", "7c+", "8a"
+    ]
+}
+
 st.title("Log a New Climb")
 
 # Authenticate with Google Sheets
@@ -51,11 +61,7 @@ def get_google_sheet_client():
     try:
         # Load service account credentials from Streamlit secrets
         gcp_service_account_info = st.secrets["gcp_service_account"]
-        # Comment out the deployment line
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
-
-        # Add the local testing line
-        # gc = gspread.service_account(filename="google_credentials.json")
         return gc
     except Exception as e:
         st.error(f"Error authenticating with Google Sheets. Make sure your `secrets.toml` is configured correctly: {e}")
@@ -71,33 +77,26 @@ except gspread.exceptions.SpreadsheetNotFound:
     st.stop()
 except gspread.exceptions.WorksheetNotFound:
     st.error("Worksheet 'Climbs' not found in 'Climbing Points Data'. Please create it.")
-    st.stop
+    st.stop()
 except Exception as e:
     st.error(f"Error accessing Google Sheet or Worksheet: {e}")
     st.stop()
 
 
-# Form for input
+# --- KEY CHANGE 2: Simplified form logic ---
+# The complex if/else block is replaced with a simple lookup.
 with st.form("climb_log_form"):
     discipline = st.selectbox(
         "Discipline",
-        ("Bouldering", "Sport Climbing"),
+        options=list(grade_scales.keys()),  # Get options from the dictionary keys
         key="discipline_select"
     )
 
-    grade_options = []
-    if discipline == "Bouldering":
-        grade_options = [f"V{i}" for i in range(11)]
-    else:  # Sport Climbing
-        grade_options = [f"{i}A" for i in range(5, 8)] + [f"{i}B" for i in range(5, 8)] + [f"{i}C" for i in range(5, 8)]
-        # Filter out invalid grades like 5D, 5E, etc. and keep 5A to 7C
-        grade_options = [g for g in grade_options if g[0].isdigit() and int(g[0]) <= 7 and g[1] in ['A', 'B', 'C']]
-        grade_options = sorted(list(set(grade_options)), key=lambda x: (int(x[0]), x[1]))
-
-
+    # The options for this dropdown are now dynamically pulled from the dictionary
+    # based on the 'discipline' selected above.
     grade = st.selectbox(
         "Grade",
-        grade_options,
+        options=grade_scales[discipline],
         key="grade_select"
     )
 

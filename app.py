@@ -2,15 +2,11 @@ import streamlit as st
 import gspread
 import pandas as pd
 from datetime import datetime
-import uuid  # Library to generate unique IDs
-import extra_streamlit_components as stx # The cookie manager library
+import uuid
+import extra_streamlit_components as stx
 
-# --- 1. SETUP COOKIE-BASED USER ID ---
-@st.cache_resource
-def get_cookie_manager():
-    return stx.CookieManager()
-
-cookie_manager = get_cookie_manager()
+# --- FIX: Initialize the cookie manager directly without caching ---
+cookie_manager = stx.CookieManager()
 
 # Get the unique user ID from the cookie, or create a new one
 USER_ID_COOKIE = "climbing_app_user_id"
@@ -19,7 +15,7 @@ if not user_id:
     user_id = str(uuid.uuid4())
     # Set the cookie with a long expiration date
     cookie_manager.set(USER_ID_COOKIE, user_id, expires_at=datetime(year=2035, month=1, day=1))
-    st.rerun() # Rerun to ensure the cookie is set on the first visit
+    st.rerun()
 
 # --- Initialize Session State ---
 if 'current_session_climbs' not in st.session_state:
@@ -32,11 +28,11 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# Custom Theming (your styles are unchanged)
+# Custom Theming
 st.markdown(
     """
     <style>
-    .reportview-container { background: #F8F8F8; }
+    .reportview-container { background: #F8F8F-8; }
     .stSelectbox > label { color: #F5A623; }
     .stButton > button { background-color: #F5A623; color: white; border-radius: 5px; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; }
     .stButton > button:hover { background-color: #E08E0B; }
@@ -48,7 +44,7 @@ st.markdown(
 
 # Define grade scales in a dictionary
 grade_scales = {
-    "Bouldering": [f"V{i}" for i in range(11)],  # V0 to V10
+    "Bouldering": [f"V{i}" for i in range(11)],
     "Sport Climbing": [
         "5a", "5b", "5c", "6a", "6a+", "6b", "6b+", "6c", "6c+",
         "7a", "7a+", "7b", "7b+", "7c", "7c+", "8a"
@@ -93,7 +89,6 @@ if st.session_state.current_session_climbs:
         session_id = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         records_to_add = []
         for climb in st.session_state.current_session_climbs:
-            # --- 2. ADD THE USER ID WHEN SAVING DATA ---
             row = [climb["Discipline"], climb["Grade"], climb["Timestamp"], session_id, user_id]
             records_to_add.append(row)
 
@@ -117,9 +112,7 @@ try:
     else:
         df = pd.DataFrame(data)
 
-        # Check if the necessary columns exist
         if 'SessionID' in df.columns and 'User' in df.columns:
-            # --- 3. FILTER DATA TO SHOW ONLY THE CURRENT USER'S SESSIONS ---
             user_df = df[df['User'] == user_id]
 
             if not user_df.empty:

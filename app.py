@@ -5,8 +5,12 @@ from datetime import datetime
 import uuid
 import extra_streamlit_components as stx
 
+# Add a message to show the app has started
+st.info("🚀 App starting up...")
+
 # Initialize the cookie manager directly
 cookie_manager = stx.CookieManager()
+st.info("✅ Cookie manager initialized.")
 
 # Get or create the unique user ID
 USER_ID_COOKIE = "climbing_app_user_id"
@@ -15,6 +19,8 @@ if not user_id:
     user_id = str(uuid.uuid4())
     cookie_manager.set(USER_ID_COOKIE, user_id, expires_at=datetime(year=2035, month=1, day=1))
     st.rerun()
+
+st.info(f"✅ User ID identified: {user_id}")
 
 # Initialize Session State
 if 'current_session_climbs' not in st.session_state:
@@ -34,28 +40,41 @@ grade_scales = {
 
 st.title("Log a New Climb")
 
-# Authenticate with Google Sheets (this part is already correctly cached)
+# Authenticate with Google Sheets
 @st.cache_resource
 def get_google_sheet_client():
+    st.info("⚙️ Authenticating with Google Sheets...")
     try:
         gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+        st.info("✅ Google Sheets authentication successful.")
         return gc
     except Exception as e:
-        st.error(f"Error authenticating with Google Sheets: {e}")
+        st.error(f"Error during Google Sheets authentication: {e}")
         st.stop()
 
 gc = get_google_sheet_client()
-worksheet = gc.open("Climbing Points Data").worksheet("Climbs")
 
-# --- NEW CACHED FUNCTION FOR FETCHING DATA ---
-@st.cache_data(ttl="10m") # Cache the data for 10 minutes
+try:
+    st.info("📖 Opening spreadsheet 'Climbing Points Data'...")
+    worksheet = gc.open("Climbing Points Data").worksheet("Climbs")
+    st.info("✅ Spreadsheet and worksheet opened successfully.")
+except Exception as e:
+    st.error(f"Could not open the spreadsheet or worksheet. Please check names and sharing settings. Error: {e}")
+    st.stop()
+
+# NEW CACHED FUNCTION FOR FETCHING DATA
+@st.cache_data(ttl="10m")
 def get_all_data():
+    st.info("📥 Fetching all records from the worksheet...")
     try:
         data = worksheet.get_all_records()
+        st.info("✅ Records fetched successfully.")
         return pd.DataFrame(data)
     except Exception as e:
         st.error(f"Failed to fetch data from Google Sheet: {e}")
-        return pd.DataFrame() # Return empty dataframe on error
+        return pd.DataFrame()
+
+# --- From here on, the rest of your app will run ---
 
 # Dropdowns for logging a new climb
 discipline = st.selectbox("Discipline", options=list(grade_scales.keys()))
@@ -89,7 +108,6 @@ if st.session_state.current_session_climbs:
             st.success("Session saved successfully! Well done! 🎉")
             st.balloons()
             st.session_state.current_session_climbs = []
-            # --- IMPORTANT: Clear the cache after saving new data ---
             st.cache_data.clear()
             st.rerun()
         except Exception as e:
@@ -101,10 +119,9 @@ else:
 st.markdown("---")
 st.header("Past Sessions")
 
-# --- USE THE NEW CACHED FUNCTION HERE ---
 df = get_all_data()
 
-if df.empty:
+if df.empty and 'User' not in df.columns: # Check if dataframe is truly empty vs. just no user data yet
     st.info("No past sessions found.")
 else:
     if 'SessionID' in df.columns and 'User' in df.columns:

@@ -111,7 +111,7 @@ else:
 
 st.markdown("---")
 
-# --- 4. Display Past Sessions ---
+# --- 4. Display Past Sessions (Corrected for old data) ---
 st.header("Past Sessions")
 try:
     data = worksheet.get_all_records()
@@ -119,15 +119,28 @@ try:
         st.info("No past sessions found.")
     else:
         df = pd.DataFrame(data)
-        # Group climbs by the SessionID
-        grouped = df.groupby('SessionID')
-        # Sort sessions by date (newest first)
-        sorted_sessions = sorted(grouped, key=lambda x: pd.to_datetime(x[0]), reverse=True)
 
-        for session_id, session_df in sorted_sessions:
-            # Use an expander for each session
-            with st.expander(f"Session from {session_id}"):
-                st.dataframe(session_df[['Discipline', 'Grade', 'Timestamp']].reset_index(drop=True))
+        # --- FIX: Check if SessionID column exists and handle old data ---
+        if 'SessionID' in df.columns:
+            # Filter out old climbs that don't have a session ID
+            sessions_df = df.dropna(subset=['SessionID'])
+            # Also filter out any rows where SessionID might be an empty string
+            sessions_df = sessions_df[sessions_df['SessionID'] != '']
+
+            if not sessions_df.empty:
+                # Group the valid sessions
+                grouped = sessions_df.groupby('SessionID')
+                # Sort sessions by date (newest first)
+                sorted_sessions = sorted(grouped, key=lambda x: pd.to_datetime(x[0]), reverse=True)
+
+                for session_id, session_df in sorted_sessions:
+                    with st.expander(f"Session from {session_id}"):
+                        st.dataframe(session_df[['Discipline', 'Grade', 'Timestamp']].reset_index(drop=True))
+            else:
+                st.info("No completed sessions found yet. Finish a session to see it here.")
+        else:
+            st.warning("Action Required: Please add the 'SessionID' column header to your Google Sheet.")
+            st.info("Old climbs logged before this feature was added will not be displayed in sessions.")
 
 except Exception as e:
-    st.error(f"Error retrieving past sessions from Google Sheet: {e}")
+    st.error(f"An error occurred while displaying past sessions: {e}")

@@ -1,0 +1,7 @@
+[theme]
+# "Sunset Session" Color Palette
+primaryColor = "#FF7D5A"      # Sunset Orange (for main interactive elements)
+backgroundColor = "#F7F7F7"  # Chalk White (main background)
+secondaryBackgroundColor = "#FFFFFF" # A slightly brighter white for cards/expanders
+textColor = "#333333"          # Graphite Grey (for all text)
+font = "sans serif"            # We will override this with Poppins in the CSS

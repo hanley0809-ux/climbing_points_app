@@ -1,24 +1,82 @@
 import streamlit as st
+import gspread
 import pandas as pd
 from datetime import datetime
-import backend  # <-- 1. Import your new backend file
+import backend  # Using the separated backend logic
 
 # Initialize Session State for climbs
 if 'current_session_climbs' not in st.session_state:
     st.session_state.current_session_climbs = []
 
 # Set page title and theme
-st.set_page_config(page_title="🧗 Climbing Points", layout="centered")
+st.set_page_config(
+    page_title="🧗 Sunset Session Climbs",
+    layout="centered",
+    initial_sidebar_state="auto"
+)
 
-# Custom Theming
+# --- NEW "SUNSET SESSION" CUSTOM STYLING ---
 st.markdown(
     """
     <style>
-    .reportview-container { background: #F8F8F8; }
-    .stSelectbox > label { color: #F5A623; }
-    .stButton > button { background-color: #F5A623; color: white; border-radius: 5px; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; }
-    .stButton > button:hover { background-color: #E08E0B; }
-    h1 { color: #F5A623; }
+    /* Import Google Fonts: Poppins for titles, Roboto for body */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&family=Roboto:wght@400&display=swap');
+
+    /* --- "Subtle Chalk Dust" Background Texture --- */
+    .stApp {
+        background-color: #F7F7F7;
+        background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d1d1d1' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* --- Typography --- */
+    h1, h2, h3 {
+        font-family: 'Poppins', sans-serif;
+        color: #2B3A67; /* Dusk Blue for titles */
+    }
+
+    p, .stDataFrame, .stSelectbox, .stTextInput, .stButton {
+        font-family: 'Roboto', sans-serif;
+        color: #333333; /* Graphite Grey for body text */
+    }
+
+    /* --- Button Styling (Sunset Orange) --- */
+    .stButton > button {
+        background-color: #FF7D5A;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-weight: bold;
+        font-size: 16px;
+        transition: background-color 0.3s ease;
+    }
+
+    .stButton > button:hover {
+        background-color: #E66A4F; /* A slightly darker orange for hover */
+        color: white;
+    }
+    
+    .stButton > button:focus {
+        box-shadow: 0 0 0 2px #FFC947; /* Golden Hour Yellow for focus ring */
+    }
+
+    /* --- Input & Selectbox Styling --- */
+    .stSelectbox div[data-baseweb="select"] > div {
+        border-color: #D1D1D1; /* Stone Grey border */
+        border-radius: 8px;
+    }
+
+    /* --- Expander / Card Styling --- */
+    .stExpander {
+        border: 1px solid #D1D1D1; /* Stone Grey border */
+        border-radius: 8px;
+    }
+    
+    .stExpander header {
+        font-weight: bold;
+        color: #2B3A67; /* Dusk Blue */
+    }
+
     </style>
     """,
     unsafe_allow_html=True
@@ -32,8 +90,7 @@ grade_scales = {
 
 st.title("Log a New Climb")
 
-# --- 2. Connect to Google Sheets using the backend ---
-# The logic is now hidden in backend.py. We just call the function.
+# Connect to Google Sheets using the backend
 worksheet = backend.get_worksheet(st.secrets["gcp_service_account"])
 
 # Dropdowns for logging a new climb
@@ -56,13 +113,11 @@ if st.session_state.current_session_climbs:
     st.dataframe(current_df)
 
     if st.button("✅ Finish and Save Session"):
-        # --- 3. Save the session using the backend ---
         backend.save_new_session(worksheet, st.session_state.current_session_climbs)
         
         st.success("Session saved successfully! Well done! 🎉")
         st.balloons()
         st.session_state.current_session_climbs = []
-        # We don't need to clear the data cache here anymore
         st.rerun()
 
 else:
@@ -71,7 +126,6 @@ else:
 st.markdown("---")
 st.header("Past Sessions")
 
-# --- 4. Fetch all data using the backend ---
 df = backend.get_all_climbs(worksheet)
 
 if df.empty:

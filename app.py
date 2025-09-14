@@ -10,35 +10,105 @@ if 'current_session_climbs' not in st.session_state:
 # Set page title and theme
 st.set_page_config(page_title="🧗 Sunset Session Climbs", layout="centered")
 
-# --- "SUNSET SESSION" CUSTOM STYLING ---
-st.markdown("""... your CSS from the previous step ...""", unsafe_allow_html=True) # Keeping this brief
+# --- FULLY UPDATED "SUNSET SESSION" CUSTOM STYLING ---
+st.markdown(
+    """
+    <style>
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&family=Roboto:wght@400&display=swap');
+
+    /* Base Styling */
+    .stApp {
+        background-color: #F7F7F7;
+        background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40' 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d1d1d1' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+    }
+    h1, h2, h3 { font-family: 'Poppins', sans-serif; color: #2B3A67; }
+    p, .stDataFrame, .stSelectbox, .stTextInput, .stButton { font-family: 'Roboto', sans-serif; color: #333333; }
+    .stButton > button {
+        background-color: #FF7D5A; color: white; border: none; border-radius: 8px;
+        padding: 12px 24px; font-weight: bold; font-size: 16px; transition: background-color 0.3s ease;
+    }
+    .stButton > button:hover { background-color: #E66A4F; color: white; }
+    .stButton > button:focus { box-shadow: 0 0 0 2px #FFC947; }
+    .stSelectbox div[data-baseweb="select"] > div { border-color: #D1D1D1; border-radius: 8px; }
+
+    /* --- 1. Dashboard Card Styling --- */
+    .dashboard-card {
+        background-color: #FFFFFF;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    /* Center the metric labels */
+    .stMetric { 
+        text-align: center;
+    }
+
+    /* --- 2. Main Layout & Alignment --- */
+    [data-testid="column"] {
+        background-color: #FFFFFF;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .stAlert {
+        border: none; border-radius: 8px;
+        background-color: rgba(43, 58, 103, 0.1);
+        color: #2B3A67;
+    }
+
+    /* --- 3. Past Sessions List Styling --- */
+    .stExpander {
+        background-color: transparent;
+        border: none;
+        border-bottom: 1px solid #D1D1D1;
+        border-radius: 0;
+    }
+    .stExpander:last-of-type { border-bottom: none; }
+    .stExpander header {
+        padding: 12px 0;
+        font-weight: bold;
+        color: #2B3A67;
+        transition: background-color 0.3s ease;
+    }
+    .stExpander header:hover {
+        background-color: rgba(255, 125, 90, 0.1);
+        border-radius: 8px;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # --- DATA LOADING ---
 worksheet = backend.get_worksheet(st.secrets["gcp_service_account"])
 df = backend.get_all_climbs(worksheet)
 
-# --- 1. NEW PERSONAL STATS DASHBOARD ---
+# --- 1. PERSONAL STATS DASHBOARD ---
 st.header("Your Dashboard")
-stats = backend.get_dashboard_stats(df)
+# Wrap the dashboard columns in a div with the "dashboard-card" class
+with st.container():
+    st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
+    stats = backend.get_dashboard_stats(df)
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Climbs This Month", stats["total_climbs_month"])
+    col2.metric("Hardest Boulder", stats["hardest_boulder"])
+    col3.metric("Hardest Sport Climb", stats["hardest_sport"])
+    st.markdown('</div>', unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Climbs This Month", stats["total_climbs_month"])
-col2.metric("Hardest Boulder", stats["hardest_boulder"])
-col3.metric("Hardest Sport Climb", stats["hardest_sport"])
+st.markdown("---") 
 
-st.markdown("---") # Visual separator
-
-# Define grade scales
-grade_scales = {
-    "Bouldering": [f"V{i}" for i in range(11)],
-    "Sport Climbing": ["5a", "5b", "5c", "6a", "6a+", "6b", "6b+", "6c", "6c+", "7a", "7a+", "7b", "7b+", "7c", "7c+", "8a"]
-}
-
-# --- 2. NEW TWO-COLUMN LAYOUT FOR LOGGING ---
-log_col, session_col = st.columns([0.6, 0.4]) # Make the left column slightly wider
+# --- 2. TWO-COLUMN LAYOUT FOR LOGGING ---
+log_col, session_col = st.columns([0.6, 0.4]) 
 
 with log_col:
     st.header("Log a Climb")
+    # Define grade scales
+    grade_scales = {
+        "Bouldering": [f"V{i}" for i in range(11)],
+        "Sport Climbing": ["5a", "5b", "5c", "6a", "6a+", "6b", "6b+", "6c", "6c+", "7a", "7a+", "7b", "7b+", "7c", "7c+", "8a"]
+    }
     discipline = st.selectbox("Discipline", options=list(grade_scales.keys()))
     grade = st.selectbox("Grade", options=grade_scales[discipline])
 
@@ -61,7 +131,7 @@ with session_col:
             st.success("Session saved! 🎉")
             st.balloons()
             st.session_state.current_session_climbs = []
-            st.cache_data.clear() # Clear data cache to show new stats
+            st.cache_data.clear() 
             st.rerun()
     else:
         st.info("Your current session is empty.")
@@ -80,7 +150,6 @@ else:
 
             for session_id, session_df_group in sorted_sessions:
                 with st.expander(f"Session from {session_id}"):
-                    # --- 3. NEW ENHANCED SESSION DISPLAY ---
                     summary = backend.get_session_summary(session_df_group)
                     
                     st.markdown(f"**Total Climbs**: {summary['total_climbs']}")

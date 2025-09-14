@@ -20,7 +20,7 @@ st.markdown(
     /* Base Styling */
     .stApp {
         background-color: #F7F7F7;
-        background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40' 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d1d1d1' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d1d1d1' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
     }
     h1, h2, h3 { font-family: 'Poppins', sans-serif; color: #2B3A67; }
     p, .stDataFrame, .stSelectbox, .stTextInput, .stButton { font-family: 'Roboto', sans-serif; color: #333333; }
@@ -39,10 +39,7 @@ st.markdown(
         padding: 25px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
-    /* Center the metric labels */
-    .stMetric { 
-        text-align: center;
-    }
+    .stMetric { text-align: center; }
 
     /* --- 2. Main Layout & Alignment --- */
     [data-testid="column"] {
@@ -86,10 +83,11 @@ worksheet = backend.get_worksheet(st.secrets["gcp_service_account"])
 df = backend.get_all_climbs(worksheet)
 
 # --- 1. PERSONAL STATS DASHBOARD ---
-st.header("Your Dashboard")
-# Wrap the dashboard columns in a div with the "dashboard-card" class
+# Wrap the dashboard in a div with the "dashboard-card" class
 with st.container():
     st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
+    # --- FIX 1: Move the header INSIDE the card ---
+    st.header("Your Dashboard")
     stats = backend.get_dashboard_stats(df)
     col1, col2, col3 = st.columns(3)
     col1.metric("Climbs This Month", stats["total_climbs_month"])
@@ -100,7 +98,8 @@ with st.container():
 st.markdown("---") 
 
 # --- 2. TWO-COLUMN LAYOUT FOR LOGGING ---
-log_col, session_col = st.columns([0.6, 0.4]) 
+# --- FIX 2: Change column proportions to be equal ---
+log_col, session_col = st.columns(2, gap="large") 
 
 with log_col:
     st.header("Log a Climb")

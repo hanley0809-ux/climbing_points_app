@@ -9,7 +9,7 @@ localS = LocalStorage()
 if 'session_active' not in st.session_state: st.session_state.session_active = False
 if 'current_session_climbs' not in st.session_state:
     initial_session_climbs = localS.getItem("current_session_climbs")
-    st.session_state.current_session_climbs = initial_session_climbs['data'] if initial_session_climbs and initial_session_climbs['data'] is not None else []
+    st.session_state.current_session_climbs = initial_session_climbs if initial_session_climbs is not None else []
 if 'show_save_modal' not in st.session_state: st.session_state.show_save_modal = False
 if 'discipline' not in st.session_state: st.session_state.discipline = "Bouldering"
 if 'gym' not in st.session_state: st.session_state.gym = None
@@ -69,7 +69,8 @@ if not st.session_state.session_active:
     last_name = localS.getItem("user_name")
     
     with st.form("start_session_form"):
-        user_name = st.text_input("Your Name", value=last_name['data'] if last_name and last_name['data'] else "")
+        # --- THIS IS THE CORRECTED LINE ---
+        user_name = st.text_input("Your Name", value=last_name if last_name else "")
         discipline_choice = st.selectbox("Select Discipline", options=grade_scales.keys())
         gym_choice = None
         if discipline_choice == "Bouldering":

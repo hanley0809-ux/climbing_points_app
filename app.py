@@ -1,7 +1,7 @@
 import streamlit as st
-import gspread
 import pandas as pd
 from datetime import datetime
+import backend  # <-- 1. Import your new backend file
 
 # Initialize Session State for climbs
 if 'current_session_climbs' not in st.session_state:
@@ -32,28 +32,9 @@ grade_scales = {
 
 st.title("Log a New Climb")
 
-# Authenticate with Google Sheets
-@st.cache_resource
-def get_google_sheet_client():
-    try:
-        gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
-        return gc
-    except Exception as e:
-        st.error(f"Error authenticating with Google Sheets: {e}")
-        st.stop()
-
-gc = get_google_sheet_client()
-worksheet = gc.open("Climbing Points Data").worksheet("Climbs")
-
-# CACHED FUNCTION FOR FETCHING DATA
-@st.cache_data(ttl="10m")
-def get_all_data():
-    try:
-        data = worksheet.get_all_records()
-        return pd.DataFrame(data)
-    except Exception as e:
-        st.error(f"Failed to fetch data from Google Sheet: {e}")
-        return pd.DataFrame()
+# --- 2. Connect to Google Sheets using the backend ---
+# The logic is now hidden in backend.py. We just call the function.
+worksheet = backend.get_worksheet(st.secrets["gcp_service_account"])
 
 # Dropdowns for logging a new climb
 discipline = st.selectbox("Discipline", options=list(grade_scales.keys()))
@@ -75,35 +56,28 @@ if st.session_state.current_session_climbs:
     st.dataframe(current_df)
 
     if st.button("✅ Finish and Save Session"):
-        session_id = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        records_to_add = []
-        for climb in st.session_state.current_session_climbs:
-            # Reverted to not include a user_id
-            row = [climb["Discipline"], climb["Grade"], climb["Timestamp"], session_id]
-            records_to_add.append(row)
+        # --- 3. Save the session using the backend ---
+        backend.save_new_session(worksheet, st.session_state.current_session_climbs)
+        
+        st.success("Session saved successfully! Well done! 🎉")
+        st.balloons()
+        st.session_state.current_session_climbs = []
+        # We don't need to clear the data cache here anymore
+        st.rerun()
 
-        try:
-            worksheet.append_rows(records_to_add)
-            st.success("Session saved successfully! Well done! 🎉")
-            st.balloons()
-            st.session_state.current_session_climbs = []
-            st.cache_data.clear()
-            st.rerun()
-        except Exception as e:
-            st.error(f"Error saving session to Google Sheet: {e}")
 else:
     st.info("Log a climb to start a new session.")
 
 st.markdown("---")
 st.header("Past Sessions")
 
-df = get_all_data()
+# --- 4. Fetch all data using the backend ---
+df = backend.get_all_climbs(worksheet)
 
 if df.empty:
     st.info("No past sessions found.")
 else:
     if 'SessionID' in df.columns:
-        # Reverted to show all sessions, not filtered by user
         sessions_df = df.dropna(subset=['SessionID'])
         sessions_df = sessions_df[sessions_df['SessionID'] != '']
 

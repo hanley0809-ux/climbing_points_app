@@ -11,13 +11,77 @@ if 'current_session_climbs' not in st.session_state:
 st.set_page_config(page_title="🧗 Sunset Session Climbs", layout="centered")
 
 # --- "SUNSET SESSION" CUSTOM STYLING ---
-st.markdown("""... your CSS from the previous step ...""", unsafe_allow_html=True) # Keeping this brief
+st.markdown(
+    """
+    <style>
+    /* Import Google Fonts: Poppins for titles, Roboto for body */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&family=Roboto:wght@400&display=swap');
+
+    /* --- "Subtle Chalk Dust" Background Texture --- */
+    .stApp {
+        background-color: #F7F7F7;
+        background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d1d1d1' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* --- Typography --- */
+    h1, h2, h3 {
+        font-family: 'Poppins', sans-serif;
+        color: #2B3A67; /* Dusk Blue for titles */
+    }
+
+    p, .stDataFrame, .stSelectbox, .stTextInput, .stButton {
+        font-family: 'Roboto', sans-serif;
+        color: #333333; /* Graphite Grey for body text */
+    }
+
+    /* --- Button Styling (Sunset Orange) --- */
+    .stButton > button {
+        background-color: #FF7D5A;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-weight: bold;
+        font-size: 16px;
+        transition: background-color 0.3s ease;
+    }
+
+    .stButton > button:hover {
+        background-color: #E66A4F; /* A slightly darker orange for hover */
+        color: white;
+    }
+    
+    .stButton > button:focus {
+        box-shadow: 0 0 0 2px #FFC947; /* Golden Hour Yellow for focus ring */
+    }
+
+    /* --- Input & Selectbox Styling --- */
+    .stSelectbox div[data-baseweb="select"] > div {
+        border-color: #D1D1D1; /* Stone Grey border */
+        border-radius: 8px;
+    }
+
+    /* --- Expander / Card Styling --- */
+    .stExpander {
+        border: 1px solid #D1D1D1; /* Stone Grey border */
+        border-radius: 8px;
+    }
+    
+    .stExpander header {
+        font-weight: bold;
+        color: #2B3A67; /* Dusk Blue */
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # --- DATA LOADING ---
 worksheet = backend.get_worksheet(st.secrets["gcp_service_account"])
 df = backend.get_all_climbs(worksheet)
 
-# --- 1. NEW PERSONAL STATS DASHBOARD ---
+# --- 1. PERSONAL STATS DASHBOARD ---
 st.header("Your Dashboard")
 stats = backend.get_dashboard_stats(df)
 
@@ -34,7 +98,7 @@ grade_scales = {
     "Sport Climbing": ["5a", "5b", "5c", "6a", "6a+", "6b", "6b+", "6c", "6c+", "7a", "7a+", "7b", "7b+", "7c", "7c+", "8a"]
 }
 
-# --- 2. NEW TWO-COLUMN LAYOUT FOR LOGGING ---
+# --- 2. TWO-COLUMN LAYOUT FOR LOGGING ---
 log_col, session_col = st.columns([0.6, 0.4]) # Make the left column slightly wider
 
 with log_col:
@@ -80,7 +144,7 @@ else:
 
             for session_id, session_df_group in sorted_sessions:
                 with st.expander(f"Session from {session_id}"):
-                    # --- 3. NEW ENHANCED SESSION DISPLAY ---
+                    # --- 3. ENHANCED SESSION DISPLAY ---
                     summary = backend.get_session_summary(session_df_group)
                     
                     st.markdown(f"**Total Climbs**: {summary['total_climbs']}")

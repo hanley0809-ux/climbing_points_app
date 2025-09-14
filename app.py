@@ -10,7 +10,7 @@ if 'current_session_climbs' not in st.session_state:
 # Set page title and theme
 st.set_page_config(page_title="🧗 Sunset Session Climbs", layout="centered")
 
-# --- FULLY UPDATED "SUNSET SESSION" CUSTOM STYLING ---
+# --- UPDATED "SUNSET SESSION" CUSTOM STYLING ---
 st.markdown(
     """
     <style>
@@ -32,29 +32,17 @@ st.markdown(
     .stButton > button:focus { box-shadow: 0 0 0 2px #FFC947; }
     .stSelectbox div[data-baseweb="select"] > div { border-color: #D1D1D1; border-radius: 8px; }
 
-    /* --- 1. Dashboard Card Styling --- */
-    .dashboard-card {
-        background-color: #FFFFFF;
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
+    /* Center the metric labels */
     .stMetric { text-align: center; }
 
-    /* --- 2. Main Layout & Alignment --- */
-    [data-testid="column"] {
-        background-color: #FFFFFF;
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
+    /* Style the "empty session" info box to match the theme */
     .stAlert {
         border: none; border-radius: 8px;
         background-color: rgba(43, 58, 103, 0.1);
         color: #2B3A67;
     }
 
-    /* --- 3. Past Sessions List Styling --- */
+    /* --- Past Sessions List Styling --- */
     .stExpander {
         background-color: transparent;
         border: none;
@@ -82,28 +70,22 @@ st.markdown(
 worksheet = backend.get_worksheet(st.secrets["gcp_service_account"])
 df = backend.get_all_climbs(worksheet)
 
-# --- 1. PERSONAL STATS DASHBOARD ---
-# Wrap the dashboard in a div with the "dashboard-card" class
-with st.container():
-    st.markdown('<div class="dashboard-card">', unsafe_allow_html=True)
-    # --- FIX 1: Move the header INSIDE the card ---
-    st.header("Your Dashboard")
-    stats = backend.get_dashboard_stats(df)
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Climbs This Month", stats["total_climbs_month"])
-    col2.metric("Hardest Boulder", stats["hardest_boulder"])
-    col3.metric("Hardest Sport Climb", stats["hardest_sport"])
-    st.markdown('</div>', unsafe_allow_html=True)
+# --- PERSONAL STATS DASHBOARD ---
+# The container and div that created the card have been removed.
+st.header("Your Dashboard")
+stats = backend.get_dashboard_stats(df)
+col1, col2, col3 = st.columns(3)
+col1.metric("Climbs This Month", stats["total_climbs_month"])
+col2.metric("Hardest Boulder", stats["hardest_boulder"])
+col3.metric("Hardest Sport Climb", stats["hardest_sport"])
 
 st.markdown("---") 
 
-# --- 2. TWO-COLUMN LAYOUT FOR LOGGING ---
-# --- FIX 2: Change column proportions to be equal ---
+# --- TWO-COLUMN LAYOUT FOR LOGGING ---
 log_col, session_col = st.columns(2, gap="large") 
 
 with log_col:
     st.header("Log a Climb")
-    # Define grade scales
     grade_scales = {
         "Bouldering": [f"V{i}" for i in range(11)],
         "Sport Climbing": ["5a", "5b", "5c", "6a", "6a+", "6b", "6b+", "6c", "6c+", "7a", "7a+", "7b", "7b+", "7c", "7c+", "8a"]

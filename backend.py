@@ -33,11 +33,13 @@ def save_new_session(worksheet, climbs_to_save, user_name, session_name=None):
     
     worksheet.append_rows(records_to_add)
 
+# --- MODIFIED: Calculates 'Total Sessions' instead of 'Climbs This Month' ---
 def get_dashboard_stats(df):
-    if df.empty:
-        return {"total_climbs_month": 0, "hardest_boulder": "N/A", "hardest_sport": "N/A"}
-    now = datetime.now()
-    climbs_this_month = df[df['Timestamp'].dt.month == now.month].shape[0]
+    if df.empty or 'Session' not in df.columns:
+        return {"total_sessions": 0, "hardest_boulder": "N/A", "hardest_sport": "N/A"}
+
+    # Calculate total unique sessions
+    total_sessions = df['Session'].nunique()
 
     def find_hardest(discipline):
         discipline_df = df[df['Discipline'] == discipline]
@@ -48,7 +50,11 @@ def get_dashboard_stats(df):
     hardest_boulder = find_hardest("Bouldering")
     hardest_sport = find_hardest("Sport Climbing")
 
-    return {"total_climbs_month": climbs_this_month, "hardest_boulder": hardest_boulder, "hardest_sport": hardest_sport}
+    return {
+        "total_sessions": total_sessions,
+        "hardest_boulder": hardest_boulder,
+        "hardest_sport": hardest_sport
+    }
 
 def get_session_summary(session_df):
     total_climbs = len(session_df)

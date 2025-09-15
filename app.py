@@ -17,55 +17,33 @@ if 'name' not in st.session_state: st.session_state.name = ""
 
 st.set_page_config(page_title="🧗 Sunset Session Climbs", layout="wide")
 
-# --- UPDATED DARK MODE STYLING ---
+# --- DARK MODE STYLING ---
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto:wght@400;700&display=swap');
     
-    /* --- Global & Base Styling --- */
     h1, h2, h3 { font-family: 'Poppins', sans-serif; color: #FFFFFF; }
     p, .stDataFrame, .stSelectbox, .stTextInput, .stButton { font-family: 'Roboto', sans-serif; }
     
-    /* --- Card-Based Layout --- */
     .card {
-        background-color: #2B3A67; /* Dusk Blue */
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+        background-color: #2B3A67; border-radius: 12px; padding: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px;
     }
     
-    /* --- UPDATED Dashboard Metric Cards --- */
     .metric-card {
-        background-color: #1E2128; /* Dark background */
-        border-radius: 8px;
-        padding: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 15px;
+        background-color: #1E2128; border-radius: 8px; padding: 16px;
+        display: flex; align-items: center; justify-content: center; gap: 15px;
     }
-    .metric-icon {
-        font-size: 2.5rem; /* Larger icon */
-    }
-    .metric-text .stMetricLabel {
-        font-size: 0.9rem;
-        color: #D1D1D1; /* Lighter grey for label */
-    }
-    .metric-text .stMetricValue {
-        font-size: 1.5rem;
-        color: #FF7D5A; /* Sunset Orange */
-        font-weight: 600;
-    }
+    .metric-icon { font-size: 2.5rem; }
+    .metric-text .stMetricLabel { font-size: 0.9rem; color: #D1D1D1; }
+    .metric-text .stMetricValue { font-size: 1.5rem; color: #FF7D5A; font-weight: 600; }
 
-    /* --- Button Styling --- */
     .stButton > button {
         background-color: #FF7D5A; color: white; border: none; border-radius: 8px;
         padding: 10px 20px; font-weight: bold; transition: background-color 0.3s ease;
     }
     .stButton > button:hover { background-color: #E66A4F; }
-
     </style>
     """,
     unsafe_allow_html=True
@@ -109,7 +87,7 @@ else:
 
     st.title(f"Climbing Log for {st.session_state.name}")
 
-    # --- REDESIGNED At-a-Glance Dashboard ---
+    # --- UPDATED Dashboard with new metric and icons ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.header("📈 Your Dashboard")
@@ -120,10 +98,10 @@ else:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon">📅</div>
+                    <div class="metric-icon">🗓️</div>
                     <div class="metric-text">
-                        <div class="stMetricLabel">This Month's Volume</div>
-                        <div class="stMetricValue">{stats["total_climbs_month"]}</div>
+                        <div class="stMetricLabel">Total Sessions</div>
+                        <div class="stMetricValue">{stats["total_sessions"]}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True
@@ -132,7 +110,7 @@ else:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon">🧗‍♂️</div>
+                    <div class="metric-icon">🧗</div>
                     <div class="metric-text">
                         <div class="stMetricLabel">Hardest Boulder</div>
                         <div class="stMetricValue">{stats["hardest_boulder"]}</div>

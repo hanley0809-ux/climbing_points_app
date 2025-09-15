@@ -6,11 +6,9 @@ from streamlit_local_storage import LocalStorage
 
 # --- Session State Initialization ---
 localS = LocalStorage()
-
 if 'session_active' not in st.session_state: st.session_state.session_active = False
 if 'current_session_climbs' not in st.session_state:
     initial_session_climbs = localS.getItem("current_session_climbs")
-    # --- THIS IS THE CORRECTED LINE ---
     st.session_state.current_session_climbs = initial_session_climbs if initial_session_climbs is not None else []
 if 'show_save_modal' not in st.session_state: st.session_state.show_save_modal = False
 if 'discipline' not in st.session_state: st.session_state.discipline = "Bouldering"
@@ -18,7 +16,45 @@ if 'gym' not in st.session_state: st.session_state.gym = None
 if 'name' not in st.session_state: st.session_state.name = ""
 
 st.set_page_config(page_title="🧗 Sunset Session Climbs", layout="centered")
-st.markdown("""... your CSS styling ...""", unsafe_allow_html=True)
+
+# --- CUSTOM STYLING ---
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&family=Roboto:wght@400&display=swap');
+    .stApp {
+        background-color: #F7F7F7;
+        background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d1d1d1' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+    }
+    h1, h2, h3 { font-family: 'Poppins', sans-serif; color: #2B3A67; }
+    p, .stDataFrame, .stSelectbox, .stTextInput, .stButton { font-family: 'Roboto', sans-serif; color: #333333; }
+    .stButton > button {
+        background-color: #FF7D5A; color: white; border: none; border-radius: 8px;
+        padding: 12px 24px; font-weight: bold; font-size: 16px; transition: background-color 0.3s ease;
+    }
+    .stButton > button:hover { background-color: #E66A4F; color: white; }
+    .stButton > button:focus { box-shadow: 0 0 0 2px #FFC947; }
+    .stSelectbox div[data-baseweb="select"] > div { border-color: #D1D1D1; border-radius: 8px; }
+    .stMetric { text-align: center; }
+    .stAlert {
+        border: none; border-radius: 8px;
+        background-color: rgba(43, 58, 103, 0.1);
+        color: #2B3A67;
+    }
+    .stExpander {
+        background-color: transparent; border: none;
+        border-bottom: 1px solid #D1D1D1; border-radius: 0;
+    }
+    .stExpander:last-of-type { border-bottom: none; }
+    .stExpander header {
+        padding: 12px 0; font-weight: bold; color: #2B3A67;
+        transition: background-color 0.3s ease;
+    }
+    .stExpander header:hover { background-color: rgba(255, 125, 90, 0.1); border-radius: 8px; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 grade_scales = {
     "Bouldering": {"Stonegoat": ["Red", "Red/Orange", "Orange", "Orange/Yellow", "Yellow", "Yellow/Green", "Green", "Green/Blue", "Blue"], "Balance": ["1", "2", "3", "4", "5", "6", "7", "8"]},
@@ -36,7 +72,6 @@ if not st.session_state.session_active:
         user_name = st.text_input("Your Name", value=last_name if last_name else "")
         discipline_choice = st.selectbox("Select Discipline", options=grade_scales.keys())
         gym_choice = None
-        
         if discipline_choice == "Bouldering":
             gym_choice = st.selectbox("Select Gym", options=grade_scales["Bouldering"].keys())
         
@@ -75,7 +110,6 @@ else:
         st.header("Log a Climb")
         st.markdown(f"**Discipline:** `{st.session_state.discipline}`")
         if st.session_state.gym: st.markdown(f"**Gym:** `{st.session_state.gym}`")
-        
         grade_options = []
         if st.session_state.discipline == "Bouldering":
             grade_options = grade_scales["Bouldering"][st.session_state.gym]

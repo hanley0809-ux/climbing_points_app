@@ -17,7 +17,7 @@ if 'name' not in st.session_state: st.session_state.name = ""
 
 st.set_page_config(page_title="🧗 Sunset Session Climbs", layout="wide")
 
-# --- UPDATED STYLING WITH MOBILE OPTIMIZATION ---
+# --- STYLING WITH ROBUST MOBILE FIX ---
 st.markdown(
     """
     <style>
@@ -34,7 +34,7 @@ st.markdown(
     .metric-card {
         background-color: #1E2128; border-radius: 8px; padding: 16px;
         display: flex; align-items: center; justify-content: center; gap: 15px;
-        height: 100%; /* Ensure cards in a row are same height */
+        height: 100%;
     }
     .metric-icon { font-size: 2.5rem; }
     .metric-text .stMetricLabel { font-size: 0.9rem; color: #D1D1D1; }
@@ -46,19 +46,21 @@ st.markdown(
     }
     .stButton > button:hover { background-color: #E66A4F; }
 
-    /* --- NEW: CSS Media Query for Mobile Screens --- */
+    /* --- NEW: More Robust CSS Media Query for Mobile --- */
     @media (max-width: 768px) {
-        /* Target the container of the three columns */
-        .st-emotion-cache-z5fcl4 {
+        /* This new class targets our dashboard container */
+        .dashboard-container {
             display: flex;
-            flex-direction: row; /* Force row direction */
-            gap: 10px; /* Adjust gap for smaller screens */
+            flex-direction: row;
+            gap: 10px;
         }
         .metric-card {
             padding: 10px;
             gap: 8px;
+            flex-direction: column; /* Stack icon on top of text on mobile */
+            text-align: center;
         }
-        .metric-icon { font-size: 1.5rem; }
+        .metric-icon { font-size: 2rem; }
         .metric-text .stMetricLabel { font-size: 0.7rem; }
         .metric-text .stMetricValue { font-size: 1.1rem; }
     }
@@ -111,6 +113,8 @@ else:
         st.header("📈 Your Dashboard")
         stats = backend.get_dashboard_stats(user_df)
         
+        # Apply the custom class to the columns' parent container
+        st.markdown('<div class="dashboard-container">', unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown(
@@ -148,7 +152,9 @@ else:
                 </div>
                 """, unsafe_allow_html=True
             )
+        st.markdown('</div>', unsafe_allow_html=True) # Close the container
         st.markdown('</div>', unsafe_allow_html=True)
+
 
     # --- Two-Column Main Interface ---
     with st.container():
@@ -192,5 +198,47 @@ else:
             else:
                 st.info("Your current session is empty.")
         st.markdown('</div>', unsafe_allow_html=True)
-    
-    # ... (rest of your app code for the modal and past sessions is unchanged)
+
+    # --- Save Session Modal ---
+    if st.session_state.show_save_modal:
+        default_name = st.session_state.discipline
+        if st.session_state.gym: default_name = f"{st.session_state.gym} - {st.session_state.discipline}"
+        with st.form("save_session_form"):
+            st.subheader("Name Your Session")
+            session_name = st.text_input("Session Name (optional)", value=default_name)
+            c1, c2 = st.columns(2)
+            if c1.form_submit_button("💾 Save Session", use_container_width=True):
+                backend.save_new_session(worksheet, st.session_state.current_session_climbs, st.session_state.name, session_name)
+                st.success("Session saved!")
+                st.balloons()
+                localS.setItem("current_session_climbs", [])
+                st.session_state.current_session_climbs = []
+                st.session_state.show_save_modal = False
+                st.session_state.session_active = False 
+                st.cache_data.clear() 
+                st.rerun()
+            if c2.form_submit_button("Cancel", use_container_width=True):
+                st.session_state.show_save_modal = False
+                st.rerun()
+
+    # --- RESTORED Past Sessions Section ---
+    st.markdown("---")
+    st.header("Past Sessions")
+    if user_df.empty:
+        st.info("No past sessions found for your name.")
+    else:
+        if 'Session' in user_df.columns:
+            df_sorted_by_date = user_df.sort_values(by='Date', ascending=False)
+            grouped = df_sorted_by_date.groupby('Session')
+            for session_name, session_df_group in grouped:
+                session_date = session_df_group['Date'].iloc[0].strftime('%Y-%m-%d')
+                with st.expander(f"**{session_name}** ({session_date})"):
+                    summary = backend.get_session_summary(session_df_group)
+                    st.markdown(f"**Total Climbs**: {summary['total_climbs']} | **Top Grade**: {summary['hardest_climb']}")
+                    st.markdown("---")
+                    display_cols = ['Discipline', 'Grade', 'Timestamp']
+                    if 'Gym' in session_df_group.columns and not session_df_group['Gym'].fillna('').all() == '':
+                        display_cols.insert(2, 'Gym')
+                    st.dataframe(session_df_group[display_cols].reset_index(drop=True))
+        else:
+            st.warning("Action Required: Please update your Google Sheet columns.")

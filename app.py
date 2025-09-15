@@ -17,7 +17,7 @@ if 'name' not in st.session_state: st.session_state.name = ""
 
 st.set_page_config(page_title="🧗 Sunset Session Climbs", layout="wide")
 
-# --- DARK MODE STYLING ---
+# --- UPDATED STYLING WITH MOBILE OPTIMIZATION ---
 st.markdown(
     """
     <style>
@@ -34,6 +34,7 @@ st.markdown(
     .metric-card {
         background-color: #1E2128; border-radius: 8px; padding: 16px;
         display: flex; align-items: center; justify-content: center; gap: 15px;
+        height: 100%; /* Ensure cards in a row are same height */
     }
     .metric-icon { font-size: 2.5rem; }
     .metric-text .stMetricLabel { font-size: 0.9rem; color: #D1D1D1; }
@@ -44,6 +45,23 @@ st.markdown(
         padding: 10px 20px; font-weight: bold; transition: background-color 0.3s ease;
     }
     .stButton > button:hover { background-color: #E66A4F; }
+
+    /* --- NEW: CSS Media Query for Mobile Screens --- */
+    @media (max-width: 768px) {
+        /* Target the container of the three columns */
+        .st-emotion-cache-z5fcl4 {
+            display: flex;
+            flex-direction: row; /* Force row direction */
+            gap: 10px; /* Adjust gap for smaller screens */
+        }
+        .metric-card {
+            padding: 10px;
+            gap: 8px;
+        }
+        .metric-icon { font-size: 1.5rem; }
+        .metric-text .stMetricLabel { font-size: 0.7rem; }
+        .metric-text .stMetricValue { font-size: 1.1rem; }
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -87,7 +105,7 @@ else:
 
     st.title(f"Climbing Log for {st.session_state.name}")
 
-    # --- UPDATED Dashboard with new metric and icons ---
+    # --- Dashboard with metrics in one row ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.header("📈 Your Dashboard")
@@ -174,5 +192,5 @@ else:
             else:
                 st.info("Your current session is empty.")
         st.markdown('</div>', unsafe_allow_html=True)
-
+    
     # ... (rest of your app code for the modal and past sessions is unchanged)

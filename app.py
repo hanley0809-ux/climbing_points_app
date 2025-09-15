@@ -17,7 +17,7 @@ if 'name' not in st.session_state: st.session_state.name = ""
 
 st.set_page_config(page_title="🧗 Sunset Session Climbs", layout="wide")
 
-# --- STYLING WITH ROBUST MOBILE FIX ---
+# --- STYLING WITH ROBUST FLEXBOX FIX ---
 st.markdown(
     """
     <style>
@@ -31,12 +31,19 @@ st.markdown(
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px;
     }
     
+    /* --- NEW: Flexbox CSS for the Dashboard --- */
+    .dashboard-grid {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+    }
     .metric-card {
+        flex: 1; /* Make each card take up equal space */
         background-color: #1E2128; border-radius: 8px; padding: 16px;
         display: flex; align-items: center; justify-content: center; gap: 15px;
-        height: 100%;
     }
     .metric-icon { font-size: 2.5rem; }
+    .metric-text { text-align: left; }
     .metric-text .stMetricLabel { font-size: 0.9rem; color: #D1D1D1; }
     .metric-text .stMetricValue { font-size: 1.5rem; color: #FF7D5A; font-weight: 600; }
 
@@ -45,24 +52,14 @@ st.markdown(
         padding: 10px 20px; font-weight: bold; transition: background-color 0.3s ease;
     }
     .stButton > button:hover { background-color: #E66A4F; }
-
-    /* --- NEW: More Robust CSS Media Query for Mobile --- */
-    @media (max-width: 768px) {
-        /* This new class targets our dashboard container */
-        .dashboard-container {
-            display: flex;
-            flex-direction: row;
-            gap: 10px;
-        }
+    
+    /* Media Query to adjust for very small screens */
+    @media (max-width: 480px) {
         .metric-card {
-            padding: 10px;
-            gap: 8px;
-            flex-direction: column; /* Stack icon on top of text on mobile */
+            flex-direction: column;
             text-align: center;
         }
         .metric-icon { font-size: 2rem; }
-        .metric-text .stMetricLabel { font-size: 0.7rem; }
-        .metric-text .stMetricValue { font-size: 1.1rem; }
     }
     </style>
     """,
@@ -107,18 +104,15 @@ else:
 
     st.title(f"Climbing Log for {st.session_state.name}")
 
-    # --- Dashboard with metrics in one row ---
+    # --- UPDATED Dashboard using a single HTML block with Flexbox ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.header("📈 Your Dashboard")
         stats = backend.get_dashboard_stats(user_df)
         
-        # Apply the custom class to the columns' parent container
-        st.markdown('<div class="dashboard-container">', unsafe_allow_html=True)
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown(
-                f"""
+        st.markdown(
+            f"""
+            <div class="dashboard-grid">
                 <div class="metric-card">
                     <div class="metric-icon">🗓️</div>
                     <div class="metric-text">
@@ -126,11 +120,6 @@ else:
                         <div class="stMetricValue">{stats["total_sessions"]}</div>
                     </div>
                 </div>
-                """, unsafe_allow_html=True
-            )
-        with col2:
-            st.markdown(
-                f"""
                 <div class="metric-card">
                     <div class="metric-icon">🧗</div>
                     <div class="metric-text">
@@ -138,11 +127,6 @@ else:
                         <div class="stMetricValue">{stats["hardest_boulder"]}</div>
                     </div>
                 </div>
-                """, unsafe_allow_html=True
-            )
-        with col3:
-            st.markdown(
-                f"""
                 <div class="metric-card">
                     <div class="metric-icon">🧗‍♀️</div>
                     <div class="metric-text">
@@ -150,11 +134,10 @@ else:
                         <div class="stMetricValue">{stats["hardest_sport"]}</div>
                     </div>
                 </div>
-                """, unsafe_allow_html=True
-            )
-        st.markdown('</div>', unsafe_allow_html=True) # Close the container
+            </div>
+            """, unsafe_allow_html=True
+        )
         st.markdown('</div>', unsafe_allow_html=True)
-
 
     # --- Two-Column Main Interface ---
     with st.container():
@@ -221,7 +204,7 @@ else:
                 st.session_state.show_save_modal = False
                 st.rerun()
 
-    # --- RESTORED Past Sessions Section ---
+    # --- Past Sessions Section ---
     st.markdown("---")
     st.header("Past Sessions")
     if user_df.empty:

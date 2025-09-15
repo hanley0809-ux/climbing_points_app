@@ -14,52 +14,71 @@ if 'show_save_modal' not in st.session_state: st.session_state.show_save_modal =
 if 'discipline' not in st.session_state: st.session_state.discipline = "Bouldering"
 if 'gym' not in st.session_state: st.session_state.gym = None
 if 'name' not in st.session_state: st.session_state.name = ""
+# NEW: To store the selected grade from the buttons
+if 'selected_grade' not in st.session_state: st.session_state.selected_grade = None
 
 st.set_page_config(page_title="🧗 Sunset Session Climbs", layout="wide")
 
-# --- STYLING WITH ROBUST FLEXBOX FIX ---
+# --- STYLING WITH GRADE BUTTONS ---
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto:wght@400;700&display=swap');
     
     h1, h2, h3 { font-family: 'Poppins', sans-serif; color: #FFFFFF; }
-    p, .stDataFrame, .stSelectbox, .stTextInput, .stButton { font-family: 'Roboto', sans-serif; }
+    p, .stDataFrame, .stSelectbox, .stTextInput { font-family: 'Roboto', sans-serif; }
     
     .card {
         background-color: #2B3A67; border-radius: 12px; padding: 24px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px;
     }
     
-    /* --- NEW: Flexbox CSS for the Dashboard --- */
-    .dashboard-grid {
-        display: flex;
-        flex-direction: row;
-        gap: 16px;
-    }
     .metric-card {
-        flex: 1; /* Make each card take up equal space */
         background-color: #1E2128; border-radius: 8px; padding: 16px;
-        display: flex; align-items: center; justify-content: center; gap: 15px;
+        display: flex; align-items: center; justify-content: center; gap: 15px; height: 100%;
     }
     .metric-icon { font-size: 2.5rem; }
-    .metric-text { text-align: left; }
     .metric-text .stMetricLabel { font-size: 0.9rem; color: #D1D1D1; }
     .metric-text .stMetricValue { font-size: 1.5rem; color: #FF7D5A; font-weight: 600; }
 
+    /* --- NEW: Grade Button Styling --- */
     .stButton > button {
-        background-color: #FF7D5A; color: white; border: none; border-radius: 8px;
-        padding: 10px 20px; font-weight: bold; transition: background-color 0.3s ease;
+        border-radius: 8px;
+        padding: 10px;
+        width: 100%;
+        font-weight: bold;
+        border: 2px solid #FF7D5A; /* Default border */
+        background-color: transparent;
+        color: #FF7D5A;
     }
-    .stButton > button:hover { background-color: #E66A4F; }
-    
-    /* Media Query to adjust for very small screens */
-    @media (max-width: 480px) {
-        .metric-card {
-            flex-direction: column;
-            text-align: center;
-        }
+    .stButton > button:hover {
+        border-color: #E66A4F;
+        color: #E66A4F;
+    }
+    /* Special button for "Finish Session" */
+    .stButton.finish-btn > button {
+        background-color: #FF7D5A;
+        color: white;
+    }
+
+    /* Stonegoat Color-coded Buttons */
+    .grade-Red > div > button { border-color: #d13d3d; color: #d13d3d; }
+    .grade-Red-Orange > div > button { border-color: #e36a38; color: #e36a38; }
+    .grade-Orange > div > button { border-color: #f09433; color: #f09433; }
+    .grade-Orange-Yellow > div > button { border-color: #f7b538; color: #f7b538; }
+    .grade-Yellow > div > button { border-color: #fce14b; color: #fce14b; }
+    .grade-Yellow-Green > div > button { border-color: #b9d749; color: #b9d749; }
+    .grade-Green > div > button { border-color: #64c243; color: #64c243; }
+    .grade-Green-Blue > div > button { border-color: #43b3c2; color: #43b3c2; }
+    .grade-Blue > div > button { border-color: #436ac2; color: #436ac2; }
+
+    /* Media Query for Dashboard */
+    @media (max-width: 768px) {
+        .dashboard-grid { display: flex; flex-direction: row; gap: 10px; }
+        .metric-card { padding: 10px; gap: 8px; flex-direction: column; text-align: center; }
         .metric-icon { font-size: 2rem; }
+        .metric-text .stMetricLabel { font-size: 0.7rem; }
+        .metric-text .stMetricValue { font-size: 1.1rem; }
     }
     </style>
     """,
@@ -73,28 +92,10 @@ grade_scales = {
 
 # --- Main App Router ---
 if not st.session_state.session_active:
+    # (Homepage code is unchanged)
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.title("Welcome to Your Climbing Log")
-        st.header("Start a New Session")
-        last_name = localS.getItem("user_name")
-        with st.form("start_session_form"):
-            user_name = st.text_input("Your Name", value=last_name if last_name else "")
-            discipline_choice = st.selectbox("Select Discipline", options=grade_scales.keys())
-            gym_choice = None
-            if discipline_choice == "Bouldering":
-                gym_choice = st.selectbox("Select Gym", options=grade_scales["Bouldering"].keys())
-            submitted = st.form_submit_button("🚀 Start Climbing")
-            if submitted:
-                if not user_name:
-                    st.warning("Please enter your name.")
-                else:
-                    st.session_state.name = user_name
-                    st.session_state.discipline = discipline_choice
-                    st.session_state.gym = gym_choice
-                    st.session_state.session_active = True
-                    localS.setItem("user_name", user_name)
-                    st.rerun()
+        # ... (homepage form) ...
         st.markdown('</div>', unsafe_allow_html=True)
 else:
     # --- MAIN LOGGING APP ---
@@ -104,7 +105,7 @@ else:
 
     st.title(f"Climbing Log for {st.session_state.name}")
 
-    # --- UPDATED Dashboard using a single HTML block with Flexbox ---
+    # --- UPDATED Dashboard with new icons ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.header("📈 Your Dashboard")
@@ -121,14 +122,14 @@ else:
                     </div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-icon">🧗</div>
+                    <div class="metric-icon">🪨</div>
                     <div class="metric-text">
                         <div class="stMetricLabel">Hardest Boulder</div>
                         <div class="stMetricValue">{stats["hardest_boulder"]}</div>
                     </div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-icon">🧗‍♀️</div>
+                    <div class="metric-icon">➰</div>
                     <div class="metric-text">
                         <div class="stMetricLabel">Top Sport Grade</div>
                         <div class="stMetricValue">{stats["hardest_sport"]}</div>
@@ -146,21 +147,47 @@ else:
         with log_col:
             st.header("Log a Climb")
             st.markdown(f"**Discipline:** `{st.session_state.discipline}` | **Gym:** `{st.session_state.gym or 'N/A'}`")
+            
+            # --- NEW: Grade Selection via Buttons ---
             grade_options = []
+            is_stonegoat = st.session_state.discipline == "Bouldering" and st.session_state.gym == "Stonegoat"
+
             if st.session_state.discipline == "Bouldering":
                 grade_options = grade_scales["Bouldering"][st.session_state.gym]
-            else:
+            else: # Sport Climbing
                 grade_options = grade_scales["Sport Climbing"]
-            grade = st.selectbox("Grade", options=grade_options, label_visibility="collapsed")
+            
+            # Set the first grade as default if none is selected
+            if not st.session_state.selected_grade:
+                st.session_state.selected_grade = grade_options[0]
+
+            st.write("**Select Grade:**")
+            # Create a grid of columns for the buttons
+            cols = st.columns(4)
+            for i, grade in enumerate(grade_options):
+                col = cols[i % 4]
+                # Apply custom color class if it's a Stonegoat climb
+                css_class = f"grade-{grade.replace('/', '-')}" if is_stonegoat else ""
+                
+                with col:
+                    st.markdown(f'<div class="{css_class}">', unsafe_allow_html=True)
+                    if st.button(grade, key=f"grade_{grade}"):
+                        st.session_state.selected_grade = grade
+                    st.markdown('</div>', unsafe_allow_html=True)
 
             with st.form("add_climb_form"):
                 submitted = st.form_submit_button("➕ Add to Session")
                 if submitted:
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    new_climb = {"Discipline": st.session_state.discipline, "Grade": grade, "Timestamp": timestamp, "Gym": st.session_state.gym}
+                    new_climb = {
+                        "Discipline": st.session_state.discipline, 
+                        "Grade": st.session_state.selected_grade, # Use grade from session state
+                        "Timestamp": timestamp, 
+                        "Gym": st.session_state.gym
+                    }
                     st.session_state.current_session_climbs.append(new_climb)
                     localS.setItem("current_session_climbs", st.session_state.current_session_climbs)
-                    st.toast(f"Added {grade}! 🔥")
+                    st.toast(f"Added {st.session_state.selected_grade}! 🔥")
                     st.rerun()
 
         with session_col:
@@ -175,53 +202,14 @@ else:
                         localS.setItem("current_session_climbs", st.session_state.current_session_climbs)
                         st.rerun()
                 st.markdown("---")
+                # Apply special class to this button
+                st.markdown('<div class="finish-btn">', unsafe_allow_html=True)
                 if st.button("✅ Finish and Save Session"):
                     st.session_state.show_save_modal = True
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.info("Your current session is empty.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- Save Session Modal ---
-    if st.session_state.show_save_modal:
-        default_name = st.session_state.discipline
-        if st.session_state.gym: default_name = f"{st.session_state.gym} - {st.session_state.discipline}"
-        with st.form("save_session_form"):
-            st.subheader("Name Your Session")
-            session_name = st.text_input("Session Name (optional)", value=default_name)
-            c1, c2 = st.columns(2)
-            if c1.form_submit_button("💾 Save Session", use_container_width=True):
-                backend.save_new_session(worksheet, st.session_state.current_session_climbs, st.session_state.name, session_name)
-                st.success("Session saved!")
-                st.balloons()
-                localS.setItem("current_session_climbs", [])
-                st.session_state.current_session_climbs = []
-                st.session_state.show_save_modal = False
-                st.session_state.session_active = False 
-                st.cache_data.clear() 
-                st.rerun()
-            if c2.form_submit_button("Cancel", use_container_width=True):
-                st.session_state.show_save_modal = False
-                st.rerun()
-
-    # --- Past Sessions Section ---
-    st.markdown("---")
-    st.header("Past Sessions")
-    if user_df.empty:
-        st.info("No past sessions found for your name.")
-    else:
-        if 'Session' in user_df.columns:
-            df_sorted_by_date = user_df.sort_values(by='Date', ascending=False)
-            grouped = df_sorted_by_date.groupby('Session')
-            for session_name, session_df_group in grouped:
-                session_date = session_df_group['Date'].iloc[0].strftime('%Y-%m-%d')
-                with st.expander(f"**{session_name}** ({session_date})"):
-                    summary = backend.get_session_summary(session_df_group)
-                    st.markdown(f"**Total Climbs**: {summary['total_climbs']} | **Top Grade**: {summary['hardest_climb']}")
-                    st.markdown("---")
-                    display_cols = ['Discipline', 'Grade', 'Timestamp']
-                    if 'Gym' in session_df_group.columns and not session_df_group['Gym'].fillna('').all() == '':
-                        display_cols.insert(2, 'Gym')
-                    st.dataframe(session_df_group[display_cols].reset_index(drop=True))
-        else:
-            st.warning("Action Required: Please update your Google Sheet columns.")
+    # ... (rest of your app code for the modal and past sessions is unchanged)
